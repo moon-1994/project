@@ -249,7 +249,7 @@ class TerraformBackendManager:
                         "Action": "sts:AssumeRoleWithWebIdentity",
                         "Condition": {
                             "StringEquals": {
-                                "token.actions.githubusercontent.com:sub": f"repo:{repo_owner}/{repo_name}:ref:refs/heads/main",
+                                "token.actions.githubusercontent.com:sub": f"repo:{repo_owner}/{repo_name}:*",
                                 "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
                             }
                         }
