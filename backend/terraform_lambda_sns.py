@@ -16,13 +16,23 @@ import os
 SNS_TOPIC_ARN = os.environ.get("SNS_TOPIC_ARN", "")
 
 def format_comparison(expected, deployed):
-    lines = ["🔍 환경 비교 결과 🔍\\n"]
+    lines = ["\n=================== 🔍 환경 비교 결과 🔍 ===================\n"]
+    extended_keys = [
+        "REGION",
+        "APP_ENV",
+        "LAMBDA_FUNCTION_NAME",
+        "IAM_ROLE_NAME",
+        "SNS_TOPIC_NAME"
+    ]
+    for key in extended_keys:
+        expected.setdefault(key, "(정의되지 않음)")
+        deployed.setdefault(key, "(없음)")
     for key in expected:
         ev = expected[key]
         dv = deployed.get(key, "(없음)")
         result = "✅ 일치" if ev == dv else "❌ 불일치"
-        lines.append(f"• {key}: 예상 = `{ev}` / 실제 = `{dv}` → {result}")
-    return "\\n".join(lines)
+        lines.append(f"[ {key} ]\n → 예상: {ev}\n → 실제: {dv}\n → 결과: {result}\n------------------------------------------------------------")
+    return "\n".join(lines)
 
 def lambda_handler(event, context):
     try:
@@ -96,16 +106,12 @@ def deploy_lambda_sns(lambda_name, topic_name, email):
     except iam.exceptions.EntityAlreadyExistsException:
         print("⚠️ IAM Role 이미 존재")
 
-    # IAM Role에 정책 부여
     policy = {
         "Version": "2012-10-17",
         "Statement": [
             {
                 "Effect": "Allow",
-                "Action": [
-                    "logs:*",
-                    "sns:Publish"
-                ],
+                "Action": ["logs:*", "sns:Publish"],
                 "Resource": "*"
             }
         ]
@@ -117,12 +123,10 @@ def deploy_lambda_sns(lambda_name, topic_name, email):
     )
     print("✅ 정책 연결 완료")
 
-    # SNS Topic 생성
     topic = sns.create_topic(Name=topic_name)
     topic_arn = topic["TopicArn"]
     print(f"✅ SNS Topic 생성됨: {topic_arn}")
 
-    # 이메일 구독 추가
     sns.subscribe(
         TopicArn=topic_arn,
         Protocol="email",
@@ -130,7 +134,6 @@ def deploy_lambda_sns(lambda_name, topic_name, email):
     )
     print(f"📧 이메일 구독 전송됨: {email}")
 
-    # Lambda 함수 생성
     with open("lambda_function.zip", "rb") as f:
         zipped_code = f.read()
 
@@ -148,11 +151,16 @@ def deploy_lambda_sns(lambda_name, topic_name, email):
         )
         print("✅ Lambda 함수 생성 완료")
     except lambda_client.exceptions.ResourceConflictException:
-        print("⚠️ Lambda 함수가 이미 존재합니다.")
+        print("⚠️ Lambda 함수가 이미 존재합니다. 코드 업데이트 수행 중...")
+        lambda_client.update_function_code(
+            FunctionName=lambda_name,
+            ZipFile=zipped_code,
+            Publish=True
+        )
+        print("🔁 Lambda 함수 코드 업데이트 완료")
 
     print("📩 이메일 수신함에서 구독 확인 링크를 눌러야 메일을 받을 수 있어요!")
 
-# 실행
 if __name__ == "__main__":
     create_lambda_zip()
     deploy_lambda_sns(

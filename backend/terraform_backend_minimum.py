@@ -317,6 +317,7 @@ class TerraformBackendManager:
                             "iam:PutRolePolicy",
                             "iam:CreatePolicy",
                             "iam:AttachRolePolicy",
+                            "iam:DetachRolePolicy",
                             "lambda:RemovePermission"
                         ],
                         "Resource": "*"
