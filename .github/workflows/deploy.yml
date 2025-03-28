@@ -15,6 +15,10 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
 
+    env:
+      # 브랜치명 + 실행 번호 조합으로 project_name 구성
+      PROJECT_NAME: "tf-${{ github.ref_name }}-${{ github.run_number }}"
+
     steps:
       - name: ✅ Checkout repository
         uses: actions/checkout@v3
@@ -43,10 +47,36 @@ jobs:
         working-directory: terraform
 
       - name: 🔄 Terraform Plan
-        run: terraform plan
+        run: terraform plan -var="project_name=${PROJECT_NAME}"
         working-directory: terraform
 
       - name: ✅ Terraform Apply
         if: github.ref == 'refs/heads/main'
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve -var="project_name=${PROJECT_NAME}"
         working-directory: terraform
+
+      - name: 📣 Notify Lambda with deployment result
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "🔔 Invoking testlambda function..."
+
+          echo '{
+            "expected_env": {
+              "APP_ENV": "production",
+              "REGION": "ap-northeast-2"
+            },
+            "deployed_env": {
+              "APP_ENV": "production",
+              "REGION": "ap-northeast-2"
+            }
+          }' > payload.json
+
+          aws lambda invoke \
+            --function-name testlambda \
+            --invocation-type Event \
+            --region ap-northeast-2 \
+            --cli-binary-format raw-in-base64-out \
+            --payload fileb://payload.json \
+            response.json
+
+          echo "✅ Lambda invoked!"

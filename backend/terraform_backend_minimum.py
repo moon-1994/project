@@ -294,6 +294,54 @@ class TerraformBackendManager:
                         "Effect": "Allow",
                         "Action": ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:DeleteItem"],
                         "Resource": f"arn:aws:dynamodb:{self.region}:{self.get_account_id()}:table/{self.ddb_table}"
+                    },
+                    {
+                        "Effect": "Allow",
+                        "Action": [
+                            "sns:ListTopics",
+                            "sns:GetTopicAttributes",
+                            "sns:ListTagsForResource",
+                            "sns:Subscribe",
+                            "lambda:GetFunctionCodeSigningConfig",
+                            "lambda:GetFunction",
+                            "lambda:ListVersionsByFunction",
+                            "lambda:AddPermission",
+                             "sns:Unsubscribe"
+                        ],
+                        "Resource": "*"
+                    },
+                    {
+                        "Effect": "Allow",
+                        "Action": [
+                            "iam:CreateRole",
+                            "iam:PutRolePolicy",
+                            "iam:CreatePolicy",
+                            "iam:AttachRolePolicy",
+                            "lambda:RemovePermission"
+                        ],
+                        "Resource": "*"
+                    },
+                    {
+                        "Effect": "Allow",
+                        "Action": [
+                            "iam:GetRole",
+                            "iam:GetPolicy",
+                            "lambda:GetPolicy",
+                            "sns:GetSubscriptionAttributes",
+                            "iam:ListRolePolicies",
+                            "iam:GetPolicyVersion",
+                            "iam:ListAttachedRolePolicies",
+                            "iam:ListPolicyVersions",
+                            "iam:ListInstanceProfilesForRole" ,
+                            "iam:DeletePolicy",
+                            "iam:DeleteRole"
+                        ],
+                        "Resource": "*"
+                    },
+                    {
+                    "Effect": "Allow",
+                    "Action": "lambda:InvokeFunction",
+                    "Resource": f"arn:aws:lambda:{self.region}:{self.get_account_id()}:function:testlambda"
                     }
                 ]
             }
