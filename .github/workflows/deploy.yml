@@ -1,0 +1,68 @@
+name: Terraform Backend CI/CD
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  terraform-deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: ✅ Checkout repository
+        uses: actions/checkout@v3
+
+      - name: ⚖️ Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.TERRAFORM_ROLE_ARN }}
+          aws-region: ap-northeast-2
+
+      - name: 🙳 Create Lambda Packages (tfstate compare + lock cleaner)
+        run: |
+          python backend/terraform_lambda_sns.py
+          python backend/terraform_backend_cleaner.py
+          ls -al
+
+      - name: ⚙️ Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.7
+
+      - name: ⚙️ Terraform Init
+        run: terraform init
+        working-directory: terraform
+
+      - name: ✅ Terraform Format & Validate
+        run: |
+          terraform fmt -check
+          terraform validate
+        working-directory: terraform
+
+      - name: 🚀 Terraform Apply
+        run: |
+          terraform apply -auto-approve \
+            -var="project_name=tf-auto-135" \
+            -var="pre_deploy_state_bucket=${{ secrets.PRE_DEPLOY_STATE_BUCKET }}" \
+            -var="post_deploy_state_bucket=${{ secrets.POST_DEPLOY_STATE_BUCKET }}" \
+            -var="sns_topic_arn=${{ secrets.SNS_TOPIC_ARN }}"
+        working-directory: terraform
+
+      - name: 📄 Check tfstate file exists
+        run: ls -al terraform/
+
+      - name: 🔔 Invoke Lambda to Compare tfstate
+        run: |
+          aws lambda invoke \
+            --function-name tfstate-compare-lambda-tf-auto-135 \
+            --invocation-type Event \
+            --region ap-northeast-2 \
+            --cli-binary-format raw-in-base64-out \
+            --payload '{}' \
+            lambda_response.json

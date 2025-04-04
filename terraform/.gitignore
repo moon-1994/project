@@ -1,0 +1,22 @@
+# ❌ Terraform 캐시/바이너리 제외
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+
+# ❌ Terraform 실행 시 생성되는 임시 파일들
+*.backup
+*.log
+*.tfvars
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# ❌ 로컬 머신 전용 파일
+.terraform.lock.hcl
+
+# ❌ VSCode 및 OS 파일
+.vscode/
+.DS_Store
+Thumbs.db
